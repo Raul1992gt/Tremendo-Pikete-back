@@ -1,0 +1,33 @@
+CREATE TABLE jugadores (
+    player_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    clase VARCHAR(50) NOT NULL,
+    rol VARCHAR(50),
+    puntos_asistencia INT DEFAULT 0
+);
+
+CREATE TABLE items (
+    item_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    tipo VARCHAR(50),
+    subtipo VARCHAR(50),
+    nivel INT
+);
+
+CREATE TABLE raids (
+    raid_id SERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    nombre VARCHAR(100),
+    jefes_derrotados INT
+);
+
+CREATE TABLE asignacion_items (
+    assignment_id SERIAL PRIMARY KEY,
+    player_id INT,
+    item_id INT,
+    raid_id INT,
+    fecha_asignacion DATE,
+    FOREIGN KEY (player_id) REFERENCES jugadores(player_id),
+    FOREIGN KEY (item_id) REFERENCES items(item_id),
+    FOREIGN KEY (raid_id) REFERENCES raids(raid_id)
+);
