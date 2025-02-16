@@ -1,5 +1,5 @@
 const multer = require('multer');
-const upload = multer({ dest: '../../updloads/' }); // Puedes ajustar el destino de la carga
+const upload = multer({ storage: multer.memoryStorage() });
 const { pool } = require('../config/db')
 
 const fs = require('fs');
@@ -12,11 +12,8 @@ const procesarRaid = async (req, res) => {
             return res.status(400).json({ message: 'No se ha cargado ningún archivo' });
         }
 
-        // Obtener la ruta del archivo
-        const filePath = path.join(__dirname, '../../updloads', file.filename);
-
-        // Leer el contenido del archivo
-        const raidData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        // Leer el contenido del archivo desde el buffer
+        const raidData = JSON.parse(file.buffer.toString('utf-8'));
 
         // Procesar cada entrada en el JSON
         for (const entry of raidData) {
@@ -78,5 +75,6 @@ const procesarRaid = async (req, res) => {
         res.status(500).json({ message: 'Error procesando el raid', error });
     }
 };
+
 
 module.exports = { procesarRaid };

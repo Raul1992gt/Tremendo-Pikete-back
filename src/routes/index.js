@@ -4,7 +4,7 @@ const { organizarPrioridadesController, obtenerJugadoresController, obtenerItems
 const { loginUserController } = require('../controllers/authController');
 const { obtenerItemsPorId } = require('../controllers/itemsController')
 const { procesarRaid } = require('../controllers/cargaRaid')
-const upload = multer({dest: 'uploads/'});
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
