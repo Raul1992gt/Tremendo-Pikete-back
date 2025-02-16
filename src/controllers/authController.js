@@ -32,7 +32,7 @@ async function loginUser(nombre_usuario, contrasena) {
       const result = await client.query(`
           select u.contrasena, u.nombre_usuario, ur.rol_id 
           from usuarios u
-          join usuario_roles ur on u.id = ur.rol_id 
+          join usuario_roles ur on u.id = ur.usuario_id 
           where UPPER(u.nombre_usuario) = UPPER($1)`, [nombre_usuario]);  // Usamos el parámetro $1 para el nombre_usuario
   
       const usuario = result.rows[0];  // Obtener el primer resultado
@@ -50,7 +50,9 @@ async function loginUser(nombre_usuario, contrasena) {
       // Generar el token JWT con el id, nombre de usuario y rol del usuario
       const token = jwt.sign({
         nombre_usuario: usuario.nombre_usuario,
-        rol_id: usuario.rol_id === 1 ? 'admin' : 'raider' // Incluimos el rol en el token
+        rol_id:usuario.rol_id === 1 ? 'admin' :
+              usuario.rol_id === 2 ? 'oficial' : 
+              usuario.rol_id === 3 ? 'raider' : 'unknown'
       }, 'secreto', { expiresIn: '1h' });
   
       return token;
