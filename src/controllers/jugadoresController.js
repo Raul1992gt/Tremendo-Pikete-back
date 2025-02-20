@@ -241,7 +241,7 @@ const generarInforme = async (req, res) => {
         doc.text('Informe de Reparto de Ítems', 20, 20);
         doc.setFontSize(12);
         doc.text('Informe de jugadores y sus ítems asignados:', 20, 30);
-        doc.text('Fecha de generación: ' + new Date().toLocaleString(), 20, 40);
+        doc.text('Fecha de generación: ' + new Date().toLocaleDateString("es-ES"), 20, 40);
         doc.text('', 20, 50);  // Espacio en blanco
 
         // Definir las cabeceras de la tabla
