@@ -221,13 +221,12 @@ const generarInforme = async (req, res) => {
                     j.clase, 
                     j.rol, 
                     i.nombre AS nombreItem, 
-                    ai.note AS notaRoll, 
                     ai.respuesta
             FROM asignacion_items ai 
             JOIN jugadores j ON j.player_id = ai.player_id
             JOIN items i ON i.item_id = ai.item_id
-            order by j.nombre`
-        );
+            ORDER BY j.nombre`
+        );        
 
         // Verificar si la consulta devuelve datos
         if (result.rows.length === 0) {
@@ -263,7 +262,7 @@ const generarInforme = async (req, res) => {
                 row.clase,
                 row.rol,
                 row.nombreitem || 'N/A',
-                row.notaroll || 'N/A',
+                '**********',
                 { content: respuesta, styles: respuestaStyle }
             ];
         });
