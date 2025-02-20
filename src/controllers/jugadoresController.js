@@ -1,4 +1,6 @@
-const { pool, obtenerJugadores } = require('../config/db'); // Asegúrate de importar el pool correctamente
+const { pool, obtenerJugadores } = require('../config/db');
+const { jsPDF } = require("jspdf");
+require("jspdf-autotable");
 
 // Controlador que maneja la solicitud de jugadores
 const obtenerJugadoresController = async (req, res) => {
@@ -13,11 +15,9 @@ const obtenerJugadoresController = async (req, res) => {
 
 // Función que obtiene la cantidad de items recibidos por cada jugador
 const obtenerItemsTotalesPorJugadorController = async (req, res) => {
-    const client = await pool.connect(); // Conectar con el cliente
-
     try {
-        const result = await client.query(
-            `SELECT 
+        const result = await pool.query(`
+            SELECT 
                 j.player_id,
                 j.nombre, 
                 j.clase, 
@@ -30,19 +30,19 @@ const obtenerItemsTotalesPorJugadorController = async (req, res) => {
             LEFT JOIN 
                 items i ON ai.item_id = i.item_id
             GROUP BY 
-                j.player_id`, // Agrupamos por el ID del jugador para obtener el conteo
-        );
+                j.player_id
+            ORDER BY 
+                items_count DESC;  -- Ordenamos por cantidad de ítems recibidos
+        `);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No se encontraron jugadores o ítems' });
+        if (!result.rows.length) {
+            return res.status(404).json({ error: 'No se encontraron jugadores o ítems registrados.' });
         }
 
-        res.json(result.rows); // Devolvemos los jugadores con su cantidad de items
+        res.json(result.rows);
     } catch (error) {
-        console.error('Error al obtener los jugadores y cantidad de items:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    } finally {
-        client.release(); // Liberar el cliente después de la consulta
+        console.error('❌ Error al obtener los jugadores y su cantidad de ítems:', error);
+        res.status(500).json({ error: 'Ocurrió un error al procesar la solicitud. Intenta nuevamente.' });
     }
 };
 
@@ -210,4 +210,104 @@ const organizarPrioridadesController = async (req, res) => {
     }
 };
 
-module.exports = { organizarPrioridadesController, obtenerJugadoresController, obtenerItemsTotalesPorJugadorController, obtenerItemsPorJugadorController };
+const generarInforme = async (req, res) => {
+    console.log("Generando informe...");
+
+    const client = await pool.connect();
+
+    try {
+        const result = await client.query(
+            `SELECT j.nombre AS nombreJugador, 
+                    j.clase, 
+                    j.rol, 
+                    i.nombre AS nombreItem, 
+                    ai.note AS notaRoll, 
+                    ai.respuesta
+            FROM asignacion_items ai 
+            JOIN jugadores j ON j.player_id = ai.player_id
+            JOIN items i ON i.item_id = ai.item_id
+            order by j.nombre`
+        );
+
+        // Verificar si la consulta devuelve datos
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron jugadores ni ítems' });
+        }
+
+        // Crear el documento PDF usando jsPDF
+        const doc = new jsPDF();
+
+        // Agregar título
+        doc.setFontSize(16);
+        doc.text('Informe de Reparto de Ítems', 20, 20);
+        doc.setFontSize(12);
+        doc.text('Informe de jugadores y sus ítems asignados:', 20, 30);
+        doc.text('Fecha de generación: ' + new Date().toLocaleString(), 20, 40);
+        doc.text('', 20, 50);  // Espacio en blanco
+
+        // Definir las cabeceras de la tabla
+        const columns = [
+            'Nombre Jugador', 'Clase', 'Rol', 
+            'Nombre Item', 'Nota Roll', 'Respuesta'
+        ];
+
+        // Mapear los resultados de la base de datos a las filas de la tabla
+        const rows = result.rows.map(row => {
+            const respuesta = row.respuesta || 'N/A';
+
+            // Si la respuesta es "BiS", cambiar color de fondo de la celda
+            const respuestaStyle = respuesta === 'BiS' ? { fillColor: [0, 255, 0] } : {};
+
+            return [
+                row.nombrejugador,
+                row.clase,
+                row.rol,
+                row.nombreitem || 'N/A',
+                row.notaroll || 'N/A',
+                { content: respuesta, styles: respuestaStyle }
+            ];
+        });
+
+        // Contar el total de ítems
+        const totalItems = rows.length;
+
+        // Crear la tabla usando autoTable
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 60,  // Comienza la tabla a partir de esta posición Y
+            theme: 'grid',
+            headStyles: {
+                fillColor: [22, 160, 133],  // Color de fondo para las cabeceras
+                textColor: 255,              // Color del texto en las cabeceras
+                fontSize: 12
+            },
+            margin: { top: 10 },
+            styles: { fontSize: 10 },
+        });
+
+        // Agregar la fila con el total de ítems
+        doc.setFontSize(12);
+        doc.text(`Total de ítems entregados: ${totalItems}`, 20, doc.lastAutoTable.finalY + 10);
+
+        // Establecer las cabeceras para la respuesta HTTP
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename=informe_reparto.pdf');
+
+        // Generar el PDF y devolverlo al cliente
+        const pdfBuffer = doc.output('arraybuffer'); // Usar arraybuffer para enviar en respuesta
+        res.send(Buffer.from(pdfBuffer)); // Enviar el buffer como respuesta
+
+        console.log("Informe generado correctamente");
+
+    } catch (err) {
+        console.error("Error al generar el informe:", err);
+        res.status(500).send('Error al generar el informe.');
+    } finally {
+        client.release();  // Liberar la conexión después de usarla
+    }
+};
+
+
+
+module.exports = { generarInforme, organizarPrioridadesController, obtenerJugadoresController, obtenerItemsTotalesPorJugadorController, obtenerItemsPorJugadorController };

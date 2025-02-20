@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { organizarPrioridadesController, obtenerJugadoresController, obtenerItemsTotalesPorJugadorController, obtenerItemsPorJugadorController } = require('../controllers/jugadoresController');
+const { generarInforme, organizarPrioridadesController, obtenerJugadoresController, obtenerItemsTotalesPorJugadorController, obtenerItemsPorJugadorController } = require('../controllers/jugadoresController');
 const { loginUserController } = require('../controllers/authController');
 const { obtenerItemsPorId } = require('../controllers/itemsController')
 const { procesarRaid } = require('../controllers/cargaRaid')
@@ -28,5 +28,7 @@ router.get('/items/:id', obtenerItemsPorId);
 
 // Ruta para cargar un raid (roster)
 router.post('/cargarRaid', upload.single('file'), procesarRaid);
+
+router.get('/generarInforme', generarInforme)
 
 module.exports = router;
